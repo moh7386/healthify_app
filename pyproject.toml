@@ -1,0 +1,14 @@
+[project]
+name = "Healthify"
+version = "1.0.0"
+
+[tool.flet]
+org = "com.healthify.app"
+product = "Healthify"
+
+[tool.flet.app]
+path = "."
+
+[tool.flet.android]
+min_sdk_version = 24
+target_sdk_version = 35
