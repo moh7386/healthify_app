@@ -1,14 +1,25 @@
 [project]
-name = "Healthify"
+name = "healthify"
 version = "1.0.0"
+requires-python = ">=3.12"
+
+dependencies = [
+    "flet[all]==0.28.3",
+    "google-generativeai",
+    "pillow",
+    "requests",
+    "python-dotenv",
+]
 
 [tool.flet]
-org = "com.healthify.app"
 product = "Healthify"
+company = "SKYTECH"
 
 [tool.flet.app]
 path = "."
 
-[tool.flet.android]
-min_sdk_version = 24
-target_sdk_version = 35
+[tool.flet.python]
+version = "3.12"
+
+[tool.flet.assets]
+path = "assets"
