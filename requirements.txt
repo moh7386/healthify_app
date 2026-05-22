@@ -3,6 +3,5 @@ google-generativeai
 pillow
 requests
 python-dotenv
-pyinstaller
 httpx
 aiohttp
