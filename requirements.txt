@@ -1,4 +1,5 @@
-flet[all]==0.28.3
+# requirements.txt
+flet==0.28.3
 google-generativeai
 pillow
 requests
