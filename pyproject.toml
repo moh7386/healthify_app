@@ -9,6 +9,8 @@ dependencies = [
     "pillow",
     "requests",
     "python-dotenv",
+    "httpx",
+    "aiohttp"
 ]
 
 [tool.flet]
