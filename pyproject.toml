@@ -1,16 +1,18 @@
+# pyproject.toml
 [project]
 name = "healthify"
 version = "1.0.0"
+description = "Healthify AI Health App"
 requires-python = ">=3.12"
 
 dependencies = [
-    "flet[all]==0.28.3",
+    "flet==0.28.3",
     "google-generativeai",
     "pillow",
     "requests",
     "python-dotenv",
     "httpx",
-    "aiohttp"
+    "aiohttp",
 ]
 
 [tool.flet]
