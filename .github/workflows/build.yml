@@ -77,6 +77,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install "flet[all]==0.28.3"
+          pip install flask
           pip install -r requirements.txt
 
       - name: Flutter Doctor
