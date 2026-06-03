@@ -1,0 +1,23 @@
+Environments
+
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+Byte-compiled / optimized / DLL files
+
+pycache/
+*.py[cod]
+*$py.class
+
+Flet Build directory (We don't want to push generated files)
+
+build/
+
+Database file (Crucial: Don't push local user data to GitHub)
+
+healthify_db.json
