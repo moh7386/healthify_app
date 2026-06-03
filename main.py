@@ -3,15 +3,11 @@ import io
 import json
 import os
 import re
-import threading
-import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
 import flet as ft
-from flask import Flask, jsonify, request
-from flask_cors import CORS
 
 # =========================================================
 # THEME & CONFIGURATION (DYNAMIC)
@@ -165,51 +161,6 @@ def save_workouts(workouts: List[Dict[str, Any]]) -> None:
     save_db(db)
 
 # =========================================================
-# BACKEND LOCAL API SERVER (FLASK)
-# =========================================================
-backend_app = Flask(__name__)
-CORS(backend_app)
-
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
-
-@backend_app.route('/api/content', methods=['GET'])
-def get_content():
-    # الآن نرسل قاعدة البيانات بالكامل للوحة التحكم
-    db = load_db()
-    user = load_user()
-    metrics = calculate_metrics(user)
-    
-    # ضمان وجود الوجبات والتمارين في قاعدة البيانات قبل إرسالها
-    meals = db.get("last_meal_plan")
-    if not meals:
-        meals = meal_plan_for(user, metrics)
-        db["last_meal_plan"] = meals
-        
-    workouts = db.get("last_workout_plan")
-    if not workouts:
-        workouts = workout_plan_for(user)
-        db["last_workout_plan"] = workouts
-        
-    save_db(db)
-    return jsonify({"success": True, "db": db})
-
-@backend_app.route('/api/content', methods=['POST'])
-def update_content():
-    # الآن نستقبل ونحدث قاعدة البيانات بالكامل
-    req_data = request.json
-    if "db" in req_data:
-        save_db(req_data["db"])
-        return jsonify({"success": True, "message": "تم تحديث النظام الشامل بنجاح!"})
-    return jsonify({"success": False, "message": "بيانات غير صالحة"})
-
-def run_backend_server():
-    try:
-        backend_app.run(host='127.0.0.1', port=5050, debug=False, use_reloader=False, threaded=True)
-    except Exception as e:
-        print(f"Flask Server Error: {e}")
-
-# =========================================================
 # HEALTH LOGIC
 # =========================================================
 def normalize_gender(value: Optional[str]) -> str:
@@ -326,20 +277,29 @@ def extract_json_object(text: str) -> Dict[str, Any]:
     if cleaned.startswith("```"):
         cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
         cleaned = re.sub(r"\s*```$", "", cleaned)
-    try: return json.loads(cleaned)
+    try:
+        return json.loads(cleaned)
     except Exception:
         m = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
-        if m: return json.loads(m.group(0))
+        if m:
+            return json.loads(m.group(0))
         raise
 
 class GeminiFoodAnalyzer:
     @staticmethod
     def analyze(api_key: str, image_bytes: bytes, mime_type: str = "image/jpeg") -> Dict[str, Any]:
-        if not api_key: return {"error": "no_key"}
-        try: import google.generativeai as genai
-        except ImportError: return {"error": "missing_genai"}
-        try: from PIL import Image as PILImage
-        except ImportError: return {"error": "missing_pillow"}
+        if not api_key:
+            return {"error": "no_key"}
+        
+        try:
+            import google.generativeai as genai
+        except ImportError:
+            return {"error": "missing_genai"}
+            
+        try:
+            from PIL import Image as PILImage
+        except ImportError:
+            return {"error": "missing_pillow"}
 
         try:
             genai.configure(api_key=api_key.strip())
@@ -354,6 +314,7 @@ class GeminiFoodAnalyzer:
             image = PILImage.open(io.BytesIO(image_bytes))
             response = model.generate_content([prompt, image])
             data = extract_json_object(getattr(response, "text", "") or "{}")
+            
             return {
                 "name": str(data.get("name", "وجبة غير معروفة" if LANG == "ar" else "Unknown Meal")),
                 "calories": int(float(data.get("calories", 0) or 0)),
@@ -363,21 +324,28 @@ class GeminiFoodAnalyzer:
                 "health_score": int(float(data.get("health_score", 0) or 0)),
                 "short_advice": str(data.get("short_advice", "")),
             }
-        except Exception as ex: return {"error": str(ex)}
+        except Exception as ex:
+            return {"error": str(ex)}
 
 # =========================================================
 # UI HELPERS (RESPONSIVE DESKTOP/WEB)
 # =========================================================
 def shell(body: ft.Control, c: dict) -> ft.Container:
     return ft.Container(
-        expand=True, bgcolor=c["PAGE_BG"], 
+        expand=True,
+        bgcolor=c["PAGE_BG"],
         content=ft.Column(
             controls=[
                 ft.Container(
-                    width=1400, padding=ft.padding.only(left=24, top=24, right=24, bottom=110),
-                    alignment=ft.alignment.top_center, content=body
+                    width=1400,
+                    padding=ft.padding.only(left=24, top=24, right=24, bottom=110),
+                    alignment=ft.alignment.top_center,
+                    content=body
                 )
-            ], scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.CENTER, expand=True
+            ],
+            scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            expand=True
         )
     )
 
@@ -385,21 +353,29 @@ def nav_bar(index: int, go: Callable[[str], None], c: dict) -> ft.NavigationBar:
     routes = ["/dashboard", "/meals", "/workout", "/analysis", "/stats", "/profile"]
     labels = [t("dashboard"), t("meals"), t("workout"), t("analysis"), t("stats"), t("profile")]
     icons = [ft.Icons.HOME, ft.Icons.RESTAURANT, ft.Icons.FITNESS_CENTER, ft.Icons.CAMERA_ALT, ft.Icons.BAR_CHART, ft.Icons.PERSON]
+
     return ft.NavigationBar(
-        selected_index=index, bgcolor=c["CARD"], indicator_color=c["CARD3"],
+        selected_index=index,
+        bgcolor=c["CARD"],
+        indicator_color=c["CARD3"],
         destinations=[ft.NavigationBarDestination(icon=icons[i], label=labels[i]) for i in range(6)],
         on_change=lambda e: go(routes[e.control.selected_index]),
     )
 
 def lang_chip(page: ft.Page, c: dict) -> ft.Container:
     return ft.Container(
-        ink=True, on_click=getattr(page, "toggle_lang", None), padding=ft.padding.symmetric(horizontal=12, vertical=8),
-        border_radius=999, bgcolor=c["CARD2"],
+        ink=True,
+        on_click=getattr(page, "toggle_lang", None),
+        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+        border_radius=999,
+        bgcolor=c["CARD2"],
         content=ft.Row(
             controls=[
                 ft.Icon(ft.Icons.LANGUAGE, size=16, color=c["ACCENT"]),
                 ft.Text(t("change_lang"), size=12, weight="bold", color=c["TEXT"]),
-            ], spacing=6, alignment=ft.MainAxisAlignment.CENTER,
+            ],
+            spacing=6,
+            alignment=ft.MainAxisAlignment.CENTER,
         ),
     )
 
@@ -407,10 +383,24 @@ def header(page: ft.Page, title_text: str, sub_text: str) -> ft.Row:
     c = get_colors(page.theme_mode == ft.ThemeMode.DARK)
     theme_icon = ft.Icons.LIGHT_MODE if page.theme_mode == ft.ThemeMode.DARK else ft.Icons.DARK_MODE
     return ft.Row(
-        alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
-            ft.Column(controls=[ft.Text(title_text, size=32, weight="bold", color=c["TEXT"]), ft.Text(sub_text, size=13, color=c["SUB"])], spacing=6, expand=True),
-            ft.Row(controls=[ft.IconButton(icon=theme_icon, icon_color=c["ACCENT"], on_click=getattr(page, "toggle_theme", None)), lang_chip(page, c)], spacing=10),
+            ft.Column(
+                controls=[
+                    ft.Text(title_text, size=32, weight="bold", color=c["TEXT"]),
+                    ft.Text(sub_text, size=13, color=c["SUB"]),
+                ],
+                spacing=6,
+                expand=True,
+            ),
+            ft.Row(
+                controls=[
+                    ft.IconButton(icon=theme_icon, icon_color=c["ACCENT"], on_click=getattr(page, "toggle_theme", None)),
+                    lang_chip(page, c)
+                ],
+                spacing=10
+            )
         ],
     )
 
@@ -421,7 +411,8 @@ def stat_chip(label: str, value: str, accent: str, c: dict) -> ft.Container:
             controls=[
                 ft.Text(value, size=24, weight="bold", color=accent, text_align=ft.TextAlign.CENTER),
                 ft.Text(label, size=13, color=c["SUB"], text_align=ft.TextAlign.CENTER),
-            ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6,
         ),
     )
 
@@ -432,13 +423,15 @@ def quick_btn(icon: Any, label: str, route: str, go: Callable[[str], None], c: d
             controls=[
                 ft.Container(width=52, height=52, border_radius=16, bgcolor=c["CARD3"], alignment=ft.Alignment(0, 0), content=ft.Icon(icon, size=26, color=c["ACCENT"])),
                 ft.Text(label, size=14, weight="bold", color=c["TEXT"], text_align=ft.TextAlign.CENTER),
-            ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10,
+            ],
+            alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10,
         ),
     )
 
-def image_card(src: str, width: Optional[int], height: Optional[int], icon: Any, icon_color: str, c: dict) -> ft.Container:
+def image_card(src: str, width: Optional[int] = 110, height: Optional[int] = 110, icon: Any = ft.Icons.IMAGE, icon_color: str = "#12E3B5", c: dict = None) -> ft.Container:
+    bg_color = c["CARD3"] if c else "#222C40"
     return ft.Container(
-        width=width, height=height, border_radius=18, bgcolor=c["CARD3"], clip_behavior=ft.ClipBehavior.HARD_EDGE,
+        width=width, height=height, border_radius=18, bgcolor=bg_color, clip_behavior=ft.ClipBehavior.HARD_EDGE,
         content=ft.Image(src=src, fit=ft.ImageFit.COVER, error_content=ft.Container(expand=True, alignment=ft.Alignment(0, 0), content=ft.Icon(icon, color=icon_color, size=42))),
     )
 
@@ -453,7 +446,8 @@ def chart_bars(title_text: str, labels: List[str], values: List[float], accent: 
                     ft.Container(height=h, width=20, border_radius=8, bgcolor=accent),
                     ft.Text(lbl, size=11, color=c["SUB"]),
                     ft.Text(str(val), size=10, color=c["MUTED"]),
-                ], alignment=ft.MainAxisAlignment.END, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6,
+                ],
+                alignment=ft.MainAxisAlignment.END, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=6,
             )
         )
     return ft.Container(
@@ -463,7 +457,8 @@ def chart_bars(title_text: str, labels: List[str], values: List[float], accent: 
                 ft.Text(title_text, size=18, weight="bold", color=c["TEXT"]),
                 ft.Container(height=10),
                 ft.Row(controls=bars, alignment=ft.MainAxisAlignment.SPACE_AROUND, vertical_alignment=ft.CrossAxisAlignment.END, height=240),
-            ], spacing=6,
+            ],
+            spacing=6,
         ),
     )
 
@@ -491,7 +486,8 @@ class SplashView(ft.View):
                     ft.Text(t("welcome_sub"), size=15, color=self.c["SUB"]),
                     ft.Container(height=24),
                     ft.ProgressRing(color=self.c["ACCENT"]),
-                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=14,
+                ],
+                alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=14,
             ),
         )
 
@@ -519,6 +515,7 @@ class WelcomeView(ft.View):
         self.weight_in = tf(t("weight"), str(user.weight))
         self.activity_in = drop(t("activity"), "Moderate", ["Sedentary", "Light", "Moderate", "Active", "Very Active"])
         self.goal_in = drop(t("goal"), "Maintain", ["Lose Weight", "Maintain", "Gain Weight"])
+
         self.controls = [self.build_body()]
 
     def build_body(self) -> ft.Control:
@@ -541,21 +538,30 @@ class WelcomeView(ft.View):
             controls=[
                 ft.Container(
                     bgcolor=self.c["CARD"], border_radius=24, padding=24, shadow=ft.BoxShadow(blur_radius=20, spread_radius=0, color=self.c["SHADOW"], offset=ft.Offset(0, 8)),
-                    content=ft.Column(controls=[ft.Text(t("welcome"), size=34, weight="bold", color=self.c["TEXT"]), ft.Text(t("welcome_sub"), size=14, color=self.c["SUB"])], spacing=8),
+                    content=ft.Column(
+                        controls=[
+                            ft.Text(t("welcome"), size=34, weight="bold", color=self.c["TEXT"]),
+                            ft.Text(t("welcome_sub"), size=14, color=self.c["SUB"]),
+                        ],
+                        spacing=8,
+                    ),
                 ),
                 self.name_in,
                 ft.Row(controls=[ft.Container(expand=True, content=self.age_in), ft.Container(expand=True, content=self.gender_in)], spacing=16),
                 ft.Row(controls=[ft.Container(expand=True, content=self.height_in), ft.Container(expand=True, content=self.weight_in)], spacing=16),
-                self.activity_in, self.goal_in, ft.Container(height=10),
+                self.activity_in,
+                self.goal_in,
+                ft.Container(height=10),
                 ft.Container(
                     height=60, border_radius=18, gradient=ft.LinearGradient(colors=[self.c["ACCENT"], self.c["ACCENT2"]]), alignment=ft.Alignment(0, 0), ink=True, on_click=save_profile,
-                    content=ft.Text(t("generate_plan"), size=18, weight="bold", color="#0F1115"), 
+                    content=ft.Text(t("generate_plan"), size=18, weight="bold", color="#0F1115"),
                 ),
                 ft.Container(
                     height=60, border_radius=18, bgcolor=self.c["CARD2"], alignment=ft.Alignment(0, 0), ink=True, on_click=getattr(self.page, "toggle_lang", None),
                     content=ft.Text(t("change_lang"), size=16, weight="bold", color=self.c["TEXT"]),
                 ),
-            ], spacing=16,
+            ],
+            spacing=16,
         )
         return shell(ft.Container(width=700, content=body), self.c)
 
@@ -579,6 +585,7 @@ class DashboardView(ft.View):
             self.smart_tip_text.value = "جاري استنتاج نصيحة مخصصة لك بالذكاء الاصطناعي..." if LANG == 'ar' else "Generating a personalized AI tip..."
             self.smart_tip_text.color = self.c["ACCENT"]
             self.update()
+            
             import google.generativeai as genai
             genai.configure(api_key=self.user.api_key.strip())
             model = genai.GenerativeModel(GEMINI_MODEL)
@@ -587,6 +594,7 @@ class DashboardView(ft.View):
             lang_instr = "Arabic" if LANG == "ar" else "English"
             prompt = f"You are a professional health coach. Write a short, highly personalized, and encouraging health tip (max 2 sentences) in {lang_instr}. User details: {self.user.age} years old, {self.user.gender}, goal: {self.user.goal}. Recent weight trend: {weight_history}. Do not format with Markdown, just return the plain text."
             response = await asyncio.to_thread(model.generate_content, prompt)
+            
             if response and response.text:
                 self.smart_tip_text.value = response.text.strip()
                 self.smart_tip_text.color = self.c["SUB"]
@@ -630,7 +638,10 @@ class DashboardView(ft.View):
                                     ft.Container(width=64, height=64, border_radius=20, bgcolor=self.c["CARD3"], alignment=ft.Alignment(0, 0), content=ft.Icon(ft.Icons.PERSON, color=self.c["ACCENT"], size=32)),
                                 ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER,
                             ),
-                            ft.Container(padding=12, border_radius=16, bgcolor=self.c["CARD2"], content=ft.Text(f'BMI {self.metrics["bmi"]} • {self.metrics["bmi_status"]}', size=14, color=status_color, weight="bold")),
+                            ft.Container(
+                                padding=12, border_radius=16, bgcolor=self.c["CARD2"],
+                                content=ft.Text(f'BMI {self.metrics["bmi"]} • {self.metrics["bmi_status"]}', size=14, color=status_color, weight="bold"),
+                            ),
                         ], spacing=16,
                     ),
                 ),
@@ -695,12 +706,13 @@ class DashboardView(ft.View):
                     bgcolor=self.c["CARD"], border_radius=24, padding=24, shadow=ft.BoxShadow(blur_radius=20, spread_radius=0, color=self.c["SHADOW"], offset=ft.Offset(0, 8)),
                     content=ft.Column(
                         controls=[
-                            ft.Row(controls=[ft.Icon(ft.Icons.AUTO_AWESOME, color=self.c["ACCENT"]), ft.Text(t("smart_tip"), size=20, weight="bold", color=self.c["TEXT"])], spacing=8), 
+                            ft.Row(controls=[ft.Icon(ft.Icons.AUTO_AWESOME, color=self.c["ACCENT"]), ft.Text(t("smart_tip"), size=20, weight="bold", color=self.c["TEXT"])], spacing=8),
                             self.smart_tip_text
                         ], spacing=12
                     ),
                 ),
-            ], spacing=24,
+            ],
+            spacing=24,
         )
         return shell(body, self.c)
 
@@ -711,10 +723,12 @@ class AnalysisView(ft.View):
         self.page = page
         self.file_picker = file_picker
         self.navigation_bar = nav_bar(3, self.page.go, self.c)
+
         self.selected_path: str = ""
         self.selected_bytes: bytes = b""
         self.loading = False
         self.result: Optional[Dict[str, Any]] = None
+
         self.file_picker.on_result = self.on_pick
         self.controls = [self.build_body()]
 
@@ -722,16 +736,20 @@ class AnalysisView(ft.View):
         self.controls = [self.build_body()]
         self.update()
 
-    def pick_image(self, e): self.file_picker.pick_files(allow_multiple=False)
-    
+    def pick_image(self, e):
+        self.file_picker.pick_files(allow_multiple=False)
+
     def on_pick(self, e):
         if not getattr(e, "files", None): return
-        self.selected_path = getattr(e.files[0], "path", "") or ""
+        picked = e.files[0]
+        self.selected_path = getattr(picked, "path", "") or ""
         self.selected_bytes = b""
         if self.selected_path and os.path.exists(self.selected_path):
             try:
-                with open(self.selected_path, "rb") as f: self.selected_bytes = f.read()
-            except Exception: pass
+                with open(self.selected_path, "rb") as f:
+                    self.selected_bytes = f.read()
+            except Exception:
+                pass
         self.result = None
         self.loading = False
         self.redraw()
@@ -748,23 +766,37 @@ class AnalysisView(ft.View):
     async def analyze_task(self):
         await asyncio.sleep(0.05) 
         user = load_user()
+        
         if not self.selected_path or not os.path.exists(self.selected_path):
             self.loading = False
             self.redraw()
             return
+            
         try:
             if not self.selected_bytes:
-                with open(self.selected_path, "rb") as f: self.selected_bytes = f.read()
+                with open(self.selected_path, "rb") as f:
+                    self.selected_bytes = f.read()
+                    
             res = await asyncio.to_thread(GeminiFoodAnalyzer.analyze, user.api_key, self.selected_bytes)
+            
             if "error" in res:
                 err = res["error"]
-                self.result = {"name": "Mock Meal" if LANG == "en" else "وجبة تجريبية", "calories": 650, "protein_g": 48, "carbs_g": 34, "fat_g": 26, "health_score": 86}
-                if err == "no_key": self.result["short_advice"] = t("ai_missing")
-                elif err == "missing_pillow": self.result["short_advice"] = t("missing_pillow")
-                else: self.result["short_advice"] = f"{t('analysis_error')}: {err}"
-            else: self.result = res
+                self.result = {
+                    "name": "Mock Meal" if LANG == "en" else "وجبة تجريبية",
+                    "calories": 650, "protein_g": 48, "carbs_g": 34, "fat_g": 26, "health_score": 86,
+                }
+                if err == "no_key":
+                    self.result["short_advice"] = t("ai_missing")
+                elif err == "missing_pillow":
+                    self.result["short_advice"] = t("missing_pillow")
+                else:
+                    self.result["short_advice"] = f"{t('analysis_error')}: {err}"
+            else:
+                self.result = res
+                
         except Exception as ex:
             self.result = {"name": t("analysis_error"), "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "health_score": 0, "short_advice": str(ex)}
+            
         save_analysis(self.result or {})
         self.loading = False
         self.redraw()
@@ -785,14 +817,16 @@ class AnalysisView(ft.View):
                     ft.Icon(ft.Icons.IMAGE, size=56, color=self.c["ACCENT"]),
                     ft.Text(os.path.basename(self.selected_path), size=16, color=self.c["TEXT"], max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                     ft.Text(t("pick_image"), size=14, color=self.c["MUTED"]),
-                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10,
+                ],
+                alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10,
             )
         else:
             upload_content = ft.Column(
                 controls=[
                     ft.Icon(ft.Icons.CAMERA_ALT, size=64, color=self.c["ACCENT"]),
                     ft.Text(t("camera_hint"), size=22, weight="bold", color=self.c["TEXT"]),
-                ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10,
+                ],
+                alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10,
             )
 
         result_control = ft.Container(height=1)
@@ -1215,7 +1249,5 @@ def main(page: ft.Page):
     page.go("/")
 
 if __name__ == "__main__":
-    api_thread = threading.Thread(target=run_backend_server, daemon=True)
-    api_thread.start()
-    
+    # تم إزالة سيرفر Flask وتعدد الخيوط لضمان عمل التطبيق كـ APK للاندرويد بكل استقرار
     ft.app(target=main)
