@@ -1,94 +1,52 @@
-name: Build Healthify App
+name: Build Android APK
 
+# سيعمل هذا الأكشن تلقائياً عند الدفع (Push) لفرع main، أو عند تشغيله يدوياً
 on:
   push:
-    branches:
-      - main
-
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.29.2"
-
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install "flet[all]==0.28.3"
-          pip install -r requirements.txt
-
-      - name: Flutter Doctor
-        run: flutter doctor
-
-      - name: Build Windows App
-        run: |
-          flet build windows
-
-      - name: Upload Windows Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Healthify-Windows
-          path: build/windows/x64/runner/Release/
-
-  build-apk:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: "17"
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.11'
 
-      - name: Install Flutter
+      # تجهيز بيئة الجافا (مطلوبة لبناء تطبيقات الأندرويد)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # تجهيز محرك Flutter الذي تعتمد عليه Flet
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.29.2"
+          flutter-version: '3.19.0'
+          channel: 'stable'
 
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android Licenses
-        run: yes | flutter doctor --android-licenses
-
-      - name: Install Python Dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "flet[all]==0.28.3"
-          pip install flask
-          pip install -r requirements.txt
+          pip install flet==0.28.3
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Flutter Doctor
-        run: flutter doctor -v
-
-      - name: Build APK
+      # أمر البناء السحري من Flet
+      - name: Build APK with Flet
         run: |
           flet build apk
 
+      # رفع ملف الـ APK النهائي لتتمكن من تحميله
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Healthify-APK
-          path: build/apk/*.apk
+          name: healthify-app-release
+          path: build/apk/
