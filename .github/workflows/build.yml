@@ -17,7 +17,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12' # تم التعديل لتطابق إعدادات مشروعك
 
       # تجهيز بيئة الجافا (مطلوبة لبناء تطبيقات الأندرويد)
       - name: Setup Java
@@ -39,10 +39,10 @@ jobs:
           pip install flet==0.28.3
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # أمر البناء السحري من Flet
+      # أمر البناء السحري من Flet (تم التعديل لتقليص حجم التطبيق بشكل جذري)
       - name: Build APK with Flet
         run: |
-          flet build apk
+          flet build apk --exclude-archs armeabi-v7a,x86_64
 
       # رفع ملف الـ APK النهائي لتتمكن من تحميله
       - name: Upload APK
