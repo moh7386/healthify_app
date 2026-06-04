@@ -1,0 +1,11 @@
+.git/
+.github/
+.vscode/
+venv/
+env/
+ENV/
+.venv/
+__pycache__/
+*.pyc
+assets/uploads/
+healthify_db.json
