@@ -305,7 +305,8 @@ def shell(body: ft.Control, c: dict) -> ft.Container:
     return ft.Container(
         expand=True, bgcolor=c["PAGE_BG"], 
         content=ft.Column(
-            controls=[ft.Container(width=1400, padding=ft.padding.only(left=24, top=24, right=24, bottom=110), alignment=ft.alignment.top_center, content=body)], 
+            # الإزالة لـ width ليكون متوافق تماماً مع شاشات الهواتف (APK)
+            controls=[ft.Container(padding=ft.padding.only(left=20, top=24, right=20, bottom=110), alignment=ft.alignment.top_center, content=body)], 
             scroll=ft.ScrollMode.AUTO, horizontal_alignment=ft.CrossAxisAlignment.CENTER, expand=True
         )
     )
@@ -323,7 +324,8 @@ def nav_bar(index: int, go: Callable[[str], None], c: dict) -> ft.Container:
         tabs.append(
             ft.Container(
                 content=ft.Column([ft.Icon(icons[i], color=color, size=24), ft.Text(labels[i], size=10, color=color, weight="bold" if is_sel else "normal")], alignment=ft.MainAxisAlignment.CENTER, spacing=2),
-                padding=ft.padding.symmetric(horizontal=16, vertical=8), border_radius=16, bgcolor=bg, ink=True, on_click=lambda e, r=routes[i]: go(r)
+                # تصغير الـ padding الجانبي ليناسب الهواتف الضيقة
+                padding=ft.padding.symmetric(horizontal=10, vertical=8), border_radius=16, bgcolor=bg, ink=True, on_click=lambda e, r=routes[i]: go(r)
             )
         )
         
@@ -386,16 +388,16 @@ class AdminLoginView(ft.View):
                 
         self.controls = [
             ft.Container(
-                expand=True, alignment=ft.Alignment(0,0), 
+                expand=True, alignment=ft.Alignment(0,0), padding=20,
                 content=ft.Container(
-                    width=400, bgcolor=self.c["CARD"], padding=40, border_radius=24, 
+                    bgcolor=self.c["CARD"], padding=40, border_radius=24, 
                     shadow=ft.BoxShadow(blur_radius=40, color=self.c["SHADOW"]),
                     content=ft.Column([
                         ft.Icon(ft.Icons.ADMIN_PANEL_SETTINGS_ROUNDED, size=60, color=self.c["ACCENT"]), 
                         ft.Text(t("admin_login"), size=28, weight="bold", color=self.c["TEXT"]), 
                         ft.Container(height=10), u_in, p_in, err, 
                         ft.Container(height=10),
-                        ft.ElevatedButton(content=get_black_btn_text(t("login")), bgcolor=self.c["ACCENT"], width=400, height=50, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)), on_click=do_login), 
+                        ft.ElevatedButton(content=get_black_btn_text(t("login")), bgcolor=self.c["ACCENT"], height=50, style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=12)), on_click=do_login), 
                         ft.TextButton(t("back"), on_click=lambda e: self.page.go("/dashboard"))
                     ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER)
                 )
@@ -516,7 +518,7 @@ class AdminDashboardView(ft.View):
                         ft.Text(f'العمر: {user_data.get("age","")} سنة', color=self.c["TEXT"]),
                         ft.Text(f'الوزن: {user_data.get("weight","")} كجم', color=self.c["TEXT"]),
                         ft.Text(f'الطول: {user_data.get("height","")} سم', color=self.c["TEXT"])
-                    ], spacing=30),
+                    ], spacing=30, wrap=True),
                     ft.Container(height=30),
                     ft.ElevatedButton(
                         content=ft.Row(
@@ -608,7 +610,7 @@ class AdminDashboardView(ft.View):
                                 ft.Container(padding=ft.padding.symmetric(horizontal=8, vertical=4), border_radius=6, bgcolor=f'{self.c["ACCENT"]}22', content=ft.Text(m.get("type",""), size=11, color=self.c["ACCENT"])),
                                 ft.Text(f'🔥 {m["cal"]} kcal', color=self.c["ORANGE"], size=13, weight="bold"),
                                 ft.Text(f'🎯 {m.get("goal","")}', color=self.c["SUB"], size=12)
-                            ], spacing=10)
+                            ], spacing=10, wrap=True)
                         ], expand=True, spacing=5),
                         ft.Row([
                             ft.IconButton(ft.Icons.EDIT_ROUNDED, icon_color=self.c["BLUE"], tooltip=t("edit_meal"), on_click=lambda e, meal=m: open_dialog(meal)),
@@ -702,7 +704,7 @@ class AdminDashboardView(ft.View):
                                 ft.Container(padding=ft.padding.symmetric(horizontal=8, vertical=4), border_radius=6, border=ft.border.all(1, lvl_color), content=ft.Text(t(w.get("level","")), size=10, color=lvl_color)),
                                 ft.Text(f'⏱️ {w.get("dur",0)} min', color=self.c["SUB"], size=13),
                                 ft.Text(f'🔥 {w.get("cal",0)} kcal', color=self.c["SUB"], size=13)
-                            ], spacing=10)
+                            ], spacing=10, wrap=True)
                         ], expand=True, spacing=5),
                         ft.Row([
                             ft.IconButton(ft.Icons.EDIT_ROUNDED, icon_color=self.c["BLUE"], tooltip=t("edit_workout"), on_click=lambda e, wk=w: open_dialog(wk)),
@@ -778,7 +780,7 @@ class WelcomeView(ft.View):
                 ft.Container(height=65, border_radius=20, bgcolor=self.c["ACCENT"], alignment=ft.Alignment(0, 0), ink=True, on_click=save_profile, content=get_black_btn_text(t("generate_plan"))),
             ], spacing=16,
         )
-        return shell(ft.Container(width=700, content=body), self.c)
+        return shell(ft.Container(content=body), self.c)
 
 class DashboardView(ft.View):
     def __init__(self, page: ft.Page):
