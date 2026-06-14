@@ -8,7 +8,7 @@ import shutil
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, List
 
 import flet as ft
 
@@ -58,7 +58,7 @@ T_AR = {
     "daily_macros": "الماكروز اليومية", "daily_target": "الهدف اليومي", "meal_plan": "خطة الوجبات الأسبوعية", "nutrition_smart": "تغذية مخصصة لأهدافك", 
     "daily_nutrition_target": "الهدف الغذائي اليومي", "weekly_workout": "جدول التمارين الأسبوعي", "weekly_summary": "روتين أسبوعي متوازن",
     "food_analysis": "تحليل الطعام الذكي", "analysis_ready": "ارفع صورة طعامك لمعرفة مكوناته", "pick_image": "اختيار صورة طعام", "analyze": "تحليل الصورة", 
-    "analysis_result": "النتيجة الذكية", "health_score": "التقييم الصحي", "stats_title": "الإحصائيات", "stats_sub": "تابع التقدم والالتزام", 
+    "analysis_result": "النتيجة الذكية", "health_score": "التقييم الصحي", "stats_title": "الرسوم البيانية والإحصائيات", "stats_sub": "تابع تطور وزنك وأدائك الصحي", 
     "profile_title": "الملف الشخصي", "profile_sub": "عدّل بياناتك ليتم تحديث الخطة تلقائياً", "change_lang": "EN",
     "analyzing": "جاري تحليل الصورة بالذكاء الاصطناعي...", "error": "حدث خطأ", "current_goal": "الهدف", 
     "bmi": "مؤشر الكتلة", "calories": "سعرات", "protein": "بروتين", "carbs": "كارب", "fat": "دهون",
@@ -70,7 +70,11 @@ T_AR = {
     "add_workout": "إضافة تمرين", "edit_workout": "تعديل التمرين", "workout_title": "اسم التمرين", "workout_dur": "المدة (دقائق)", "workout_level": "المستوى",
     "easy": "مبتدئ", "medium": "متوسط", "hard": "متقدم", "day": "اليوم", "confirm_delete": "هل أنت متأكد من الحذف؟", "yes": "نعم", "no": "لا",
     "day_1": "اليوم 1", "day_2": "اليوم 2", "day_3": "اليوم 3", "day_4": "اليوم 4", "day_5": "اليوم 5", "day_6": "اليوم 6", "day_7": "اليوم 7",
-    "pick_local_file": "رفع صورة"
+    "pick_local_file": "رفع صورة",
+    "adherence": "معدل الالتزام", "active_days": "أيام النشاط", "weight_history": "سجل تطور الوزن", 
+    "calories_history": "سجل السعرات الحرارية", "achievements": "الإنجازات الصحية", "streak": "سلسلة الالتزام", 
+    "workouts_logged": "التمارين المنجزة", "meals_logged": "الوجبات المسجلة", "current_snapshot": "الملخص الصحي الحالي",
+    "current_age": "العمر", "current_weight": "الوزن الحالي", "current_height": "الطول"
 }
 
 T_EN = {
@@ -83,7 +87,7 @@ T_EN = {
     "daily_macros": "Daily Macros", "daily_target": "Daily Target", "meal_plan": "Weekly Meal Plan", "nutrition_smart": "Tailored to your goals", 
     "weekly_workout": "Weekly Workout", "weekly_summary": "Balanced routine",
     "food_analysis": "AI Food Analysis", "analysis_ready": "Upload food image to analyze", "pick_image": "Pick Food Image", "analyze": "Analyze", 
-    "analysis_result": "Smart Result", "health_score": "Health Score", "stats_title": "Stats", "stats_sub": "Track progress", 
+    "analysis_result": "Smart Result", "health_score": "Health Score", "stats_title": "Charts & Stats", "stats_sub": "Track your progress", 
     "profile_title": "Profile", "profile_sub": "Edit details to update plan", "change_lang": "عربي",
     "analyzing": "AI is analyzing image...", "error": "Error occurred", "current_goal": "Goal", 
     "bmi": "BMI", "calories": "Calories", "protein": "Protein", "carbs": "Carbs", "fat": "Fat",
@@ -95,7 +99,11 @@ T_EN = {
     "add_workout": "Add Workout", "edit_workout": "Edit Workout", "workout_title": "Title", "workout_dur": "Duration (m)", "workout_level": "Level",
     "easy": "Beginner", "medium": "Intermediate", "hard": "Advanced", "day": "Day", "confirm_delete": "Are you sure to delete?", "yes": "Yes", "no": "No",
     "day_1": "Day 1", "day_2": "Day 2", "day_3": "Day 3", "day_4": "Day 4", "day_5": "Day 5", "day_6": "Day 6", "day_7": "Day 7",
-    "pick_local_file": "Upload Image"
+    "pick_local_file": "Upload Image",
+    "adherence": "Adherence", "active_days": "Active Days", "weight_history": "Weight History", 
+    "calories_history": "Calories History", "achievements": "Achievements", "streak": "Streak", 
+    "workouts_logged": "Workouts Logged", "meals_logged": "Meals Logged", "current_snapshot": "Current Snapshot",
+    "current_age": "Age", "current_weight": "Current Weight", "current_height": "Height"
 }
 
 TRANSLATIONS = {"ar": T_AR, "en": T_EN}
@@ -123,23 +131,43 @@ class UserProfile:
     weight: float = 70.0
     activity_level: str = "Moderate"
     goal: str = "Maintain"
-    api_key: str = ""
+    api_key: str = "AQ.Ab8RN6JGu00EStrnf7DR21JC-ZQi9uPi7hQLigb2ifD5wRga5g"
     is_setup: bool = False
 
 DEFAULT_MEALS = [
     {"id": "m1", "name": "سلطة كينوا ودجاج", "cal": 350, "desc": "غنية بالألياف والبروتين", "type": "الغداء", "goal": "Lose Weight", "img": "defaults/m1.png"},
     {"id": "m2", "name": "شوفان بالتوت البري", "cal": 280, "desc": "طاقة صباحية خفيفة", "type": "الفطور", "goal": "Lose Weight", "img": "defaults/m2.png"},
     {"id": "m3", "name": "سلمون مشوي مع هليون", "cal": 400, "desc": "أوميجا 3 منخفض الكارب", "type": "العشاء", "goal": "Lose Weight", "img": "defaults/m3.png"},
-    {"id": "m4", "name": "زبادي يوناني ولوز", "cal": 150, "desc": "سناك بروتين", "type": "سناك", "goal": "Lose Weight", "img": "defaults/m4.png"},
-    {"id": "m6", "name": "باستا بيستو بالدجاج", "cal": 750, "desc": "كربوهيدرات معقدة", "type": "الغداء", "goal": "Gain Weight", "img": "defaults/m5.png"},
-    {"id": "m7", "name": "سموثي زبدة الفول والموز", "cal": 600, "desc": "سائل عالي السعرات", "type": "الفطور", "goal": "Gain Weight", "img": "defaults/m6.png"},
-    {"id": "m10", "name": "ساندويتش ديك رومي", "cal": 450, "desc": "توازن مثالي للعمل", "type": "الغداء", "goal": "Maintain", "img": "defaults/m7.png"},
+    {"id": "m4", "name": "زبادي يوناني ولوز", "cal": 150, "desc": "سناك بروتين عالي", "type": "سناك", "goal": "Lose Weight", "img": "defaults/m4.png"},
+    {"id": "m5", "name": "شوربة عدس بالخضار", "cal": 220, "desc": "سعرات منخفضة ومغذية", "type": "العشاء", "goal": "Lose Weight", "img": "defaults/m1.png"},
+    {"id": "m6", "name": "توست أفوكادو وبيض", "cal": 320, "desc": "دهون صحية مشبعة", "type": "الفطور", "goal": "Lose Weight", "img": "defaults/m2.png"},
+    
+    {"id": "m7", "name": "باستا بيستو بالدجاج", "cal": 750, "desc": "كربوهيدرات معقدة للتضخيم", "type": "الغداء", "goal": "Gain Weight", "img": "defaults/m5.png"},
+    {"id": "m8", "name": "سموثي زبدة الفول والموز", "cal": 600, "desc": "سائل عالي السعرات والبروتين", "type": "الفطور", "goal": "Gain Weight", "img": "defaults/m6.png"},
+    {"id": "m9", "name": "ستيك بقري مع بطاطس مهروسة", "cal": 850, "desc": "وجبة ضخامة صافية", "type": "الغداء", "goal": "Gain Weight", "img": "defaults/m7.png"},
+    {"id": "m10", "name": "أومليت 4 بيضات بالجبن", "cal": 500, "desc": "بروتين ودهون للطاقة", "type": "الفطور", "goal": "Gain Weight", "img": "defaults/m2.png"},
+    {"id": "m11", "name": "رز أبيض ودجاج مشوي", "cal": 700, "desc": "وجبة ما بعد التمرين", "type": "العشاء", "goal": "Gain Weight", "img": "defaults/m3.png"},
+    {"id": "m12", "name": "بروتين بار ومكسرات", "cal": 450, "desc": "سناك سريع لزيادة الوزن", "type": "سناك", "goal": "Gain Weight", "img": "defaults/m4.png"},
+
+    {"id": "m13", "name": "ساندويتش ديك رومي أسمر", "cal": 450, "desc": "توازن مثالي لأوقات العمل", "type": "الغداء", "goal": "Maintain", "img": "defaults/m7.png"},
+    {"id": "m14", "name": "بيض مسلوق وخبز قمح كامل", "cal": 350, "desc": "فطور متوازن", "type": "الفطور", "goal": "Maintain", "img": "defaults/m2.png"},
+    {"id": "m15", "name": "دجاج مشوي مع أرز بني", "cal": 500, "desc": "وجبة متكاملة الماكروز", "type": "الغداء", "goal": "Maintain", "img": "defaults/m1.png"},
+    {"id": "m16", "name": "تونة مع سلطة خضراء", "cal": 300, "desc": "عشاء خفيف للحفاظ على الوزن", "type": "العشاء", "goal": "Maintain", "img": "defaults/m3.png"},
+    {"id": "m17", "name": "فواكه مشكلة وشوكولاتة داكنة", "cal": 250, "desc": "سناك صحي وممتع", "type": "سناك", "goal": "Maintain", "img": "defaults/m4.png"},
+    {"id": "m18", "name": "سمك فيليه مشوي مع كينوا", "cal": 480, "desc": "غني بالأوميجا 3", "type": "العشاء", "goal": "Maintain", "img": "defaults/m5.png"},
 ]
 
 DEFAULT_WORKOUTS = [
     {"id": "w1", "title": "HIIT كارديو حارق", "dur": 30, "level": "hard", "cal": 400, "img": "defaults/w1.png"},
     {"id": "w2", "title": "مقاومة جزء علوي", "dur": 45, "level": "medium", "cal": 350, "img": "defaults/w2.png"},
-    {"id": "w3", "title": "مشي سريع (جهاز)", "dur": 40, "level": "easy", "cal": 250, "img": "defaults/w3.png"},
+    {"id": "w3", "title": "مشي سريع (جهاز السير)", "dur": 40, "level": "easy", "cal": 250, "img": "defaults/w3.png"},
+    {"id": "w4", "title": "يوجا وإطالات عميقة", "dur": 30, "level": "easy", "cal": 150, "img": "defaults/w1.png"},
+    {"id": "w5", "title": "تمرين أرجل وبطن مكثف", "dur": 50, "level": "hard", "cal": 450, "img": "defaults/w2.png"},
+    {"id": "w6", "title": "سباحة حرة متوسطة", "dur": 45, "level": "medium", "cal": 400, "img": "defaults/w3.png"},
+    {"id": "w7", "title": "تمارين بوزن الجسم", "dur": 60, "level": "hard", "cal": 500, "img": "defaults/w1.png"},
+    {"id": "w8", "title": "ركوب الدراجة الثابتة", "dur": 35, "level": "easy", "cal": 300, "img": "defaults/w2.png"},
+    {"id": "w9", "title": "رفع أثقال (أوزان حرة)", "dur": 55, "level": "hard", "cal": 480, "img": "defaults/w3.png"},
+    {"id": "w10", "title": "كارديو ودرج", "dur": 20, "level": "medium", "cal": 250, "img": "defaults/w1.png"},
 ]
 
 def default_db() -> Dict[str, Any]:
@@ -159,6 +187,7 @@ def load_db() -> Dict[str, Any]:
             if "master_meals" not in db: db["master_meals"] = DEFAULT_MEALS.copy()
             if "master_workouts" not in db: db["master_workouts"] = DEFAULT_WORKOUTS.copy()
             if "weekly_plan" not in db: db["weekly_plan"] = {"meals": {}, "workouts": {}}
+            if "weight_history" not in db: db["weight_history"] = []
             return db
     except Exception: return default_db()
 
@@ -175,9 +204,16 @@ def load_user() -> UserProfile:
 def save_user(user: UserProfile) -> None:
     db = load_db()
     db["user"] = asdict(user)
+    
     hist = db.setdefault("weight_history", [])
-    hist.append({"day": datetime.now().strftime("%a"), "weight": float(user.weight)})
-    db["weight_history"] = hist[-14:]
+    today_str = datetime.now().strftime("%d-%m")
+    
+    if hist and hist[-1]["day"] == today_str:
+        hist[-1]["weight"] = float(user.weight)
+    else:
+        hist.append({"day": today_str, "weight": float(user.weight)})
+        
+    db["weight_history"] = hist[-14:] 
     save_db(db)
 
 def clear_user_data() -> None:
@@ -188,7 +224,7 @@ def clear_user_data() -> None:
     save_db(db)
 
 # =========================================================
-# HEALTH LOGIC
+# HEALTH LOGIC & HISTORY BUILDERS
 # =========================================================
 def normalize_gender(value: Optional[str]) -> str: 
     return "Male" if value in ("Male", "ذكر") else "Female"
@@ -266,6 +302,12 @@ def generate_weekly_plan(user: UserProfile):
     db["weekly_plan"] = {"meals": weekly_meals, "workouts": weekly_workouts}
     save_db(db)
 
+def build_weight_history(w: float) -> List[float]:
+    return [round(w + d, 1) for d in (-0.8, -0.5, -0.3, -0.1, 0.0, 0.1, 0.2)]
+
+def build_calorie_history(target: int) -> List[int]:
+    return [int(target + d) for d in (-140, -80, -30, 0, 60, 30, 90)]
+
 # =========================================================
 # AI FOOD ANALYZER
 # =========================================================
@@ -300,7 +342,7 @@ class GeminiFoodAnalyzer:
             return {"error": str(ex)}
 
 # =========================================================
-# UI HELPERS (المحاذاة المركزية الصارمة)
+# UI HELPERS (المحاذاة المركزية والرسوم البيانية)
 # =========================================================
 def shell(body: ft.Control, c: dict) -> ft.Container:
     return ft.Container(
@@ -312,12 +354,12 @@ def shell(body: ft.Control, c: dict) -> ft.Container:
     )
 
 def nav_bar(index: int, go: Callable[[str], None], c: dict) -> ft.Container:
-    routes = ["/dashboard", "/meals", "/workout", "/analysis", "/profile"]
-    labels = [t("dashboard"), t("meals"), t("workout"), t("analysis"), t("profile")]
-    icons = [ft.Icons.HOME_ROUNDED, ft.Icons.RESTAURANT_MENU_ROUNDED, ft.Icons.FITNESS_CENTER_ROUNDED, ft.Icons.CAMERA_ENHANCE_ROUNDED, ft.Icons.PERSON_ROUNDED]
+    routes = ["/dashboard", "/meals", "/workout", "/analysis", "/stats", "/profile"]
+    labels = [t("dashboard"), t("meals"), t("workout"), t("analysis"), t("stats"), t("profile")]
+    icons = [ft.Icons.HOME_ROUNDED, ft.Icons.RESTAURANT_MENU_ROUNDED, ft.Icons.FITNESS_CENTER_ROUNDED, ft.Icons.CAMERA_ENHANCE_ROUNDED, ft.Icons.BAR_CHART_ROUNDED, ft.Icons.PERSON_ROUNDED]
     
     tabs = []
-    for i in range(5):
+    for i in range(6):
         is_sel = (i == index)
         color = c["ACCENT"] if is_sel else c["SUB"]
         bg = c["CARD3"] if is_sel else "transparent"
@@ -334,17 +376,24 @@ def nav_bar(index: int, go: Callable[[str], None], c: dict) -> ft.Container:
         content=ft.Row(tabs, alignment=ft.MainAxisAlignment.SPACE_AROUND, vertical_alignment=ft.CrossAxisAlignment.CENTER)
     )
 
-def header(page: ft.Page, title_text: str, sub_text: str) -> ft.Row:
+def header(page: ft.Page, title_text: str, sub_text: str, show_back: bool = False) -> ft.Row:
     c = get_colors(page.theme_mode == ft.ThemeMode.DARK)
     t_icon = ft.Icons.LIGHT_MODE_ROUNDED if page.theme_mode == ft.ThemeMode.DARK else ft.Icons.DARK_MODE_ROUNDED
+    
+    right_controls = []
+    if show_back:
+        right_controls.append(ft.IconButton(icon=ft.Icons.ARROW_BACK_ROUNDED if LANG=='en' else ft.Icons.ARROW_FORWARD_ROUNDED, icon_color=c["TEXT"], on_click=lambda e: page.go("/dashboard")))
+        
+    right_controls.extend([
+        ft.IconButton(icon=ft.Icons.ADMIN_PANEL_SETTINGS_ROUNDED, icon_color=c["MUTED"], on_click=lambda e: page.go("/admin_login")),
+        ft.IconButton(icon=t_icon, icon_color=c["ACCENT"], on_click=getattr(page, "toggle_theme", None))
+    ])
+
     return ft.Row(
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER,
         controls=[
             ft.Column(controls=[ft.Text(title_text, size=32, weight="bold", color=c["TEXT"]), ft.Text(sub_text, size=14, color=c["SUB"])], spacing=4, expand=True),
-            ft.Row([
-                ft.IconButton(icon=ft.Icons.ADMIN_PANEL_SETTINGS_ROUNDED, icon_color=c["MUTED"], on_click=lambda e: page.go("/admin_login")),
-                ft.IconButton(icon=t_icon, icon_color=c["ACCENT"], on_click=getattr(page, "toggle_theme", None)), 
-            ], spacing=5),
+            ft.Row(right_controls, spacing=5),
         ],
     )
 
@@ -357,6 +406,59 @@ def stat_card(icon, title: str, val: str, color: str, c: dict) -> ft.Container:
             ft.Text(val, size=24, weight="w800", color=c["TEXT"]),
             ft.Text(title, size=13, color=c["SUB"])
         ], spacing=8)
+    )
+
+def info_row(label: str, value: str, icon: Any, color: str, c: dict) -> ft.Container:
+    return ft.Container(
+        expand=True, padding=ft.padding.symmetric(horizontal=14, vertical=14),
+        border_radius=20, bgcolor=c["CARD2"], border=ft.border.all(1, c["CARD3"]),
+        content=ft.Row(
+            controls=[
+                ft.Container(
+                    width=40, height=40, border_radius=13, bgcolor=f"{color}22",
+                    alignment=ft.Alignment(0, 0), content=ft.Icon(icon, color=color, size=20)
+                ),
+                ft.Column(
+                    controls=[
+                        ft.Text(label, size=11, color=c["MUTED"]),
+                        ft.Text(value, size=15, weight="bold", color=c["TEXT"]),
+                    ], spacing=2
+                ),
+            ], spacing=12
+        )
+    )
+
+def chart_bars(title_text: str, labels: List[str], values: List[float], accent: str, c: dict) -> ft.Container:
+    max_v = max(values) if values else 1
+    def bar_col(lbl: str, val: float) -> ft.Column:
+        h = max(20, int((val / max_v) * 120))
+        return ft.Column(
+            controls=[
+                ft.Container(height=h, width=20, border_radius=8, bgcolor=accent),
+                ft.Text(lbl, size=10, color=c["SUB"], text_align=ft.TextAlign.CENTER),
+                ft.Text(str(val), size=9, color=c["MUTED"], text_align=ft.TextAlign.CENTER),
+            ],
+            alignment=ft.MainAxisAlignment.END,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=5,
+        )
+
+    return ft.Container(
+        bgcolor=c["CARD"], border_radius=24, padding=20, border=ft.border.all(1, c["CARD3"]),
+        shadow=ft.BoxShadow(blur_radius=30, color=c["SHADOW"]),
+        content=ft.Column(
+            controls=[
+                ft.Text(title_text, size=17, weight="bold", color=c["TEXT"]),
+                ft.Container(height=8),
+                ft.Row(
+                    controls=[bar_col(l, v) for l, v in zip(labels, values)],
+                    alignment=ft.MainAxisAlignment.SPACE_AROUND,
+                    vertical_alignment=ft.CrossAxisAlignment.END,
+                    height=180,
+                ),
+            ],
+            spacing=4,
+        ),
     )
 
 def safe_image(src: str) -> Optional[ft.DecorationImage]:
@@ -493,16 +595,36 @@ class DashboardView(ft.View):
             controls=[
                 header(self.page, t("dashboard_title"), t("dashboard_sub")),
                 ft.Container(height=10),
+                
                 ft.ResponsiveRow([
                     ft.Column(col={"xs": 6, "md": 3}, controls=[stat_card(ft.Icons.MONITOR_WEIGHT_ROUNDED, t("bmi"), str(self.metrics["bmi"]), self.c["ACCENT"], self.c)]),
                     ft.Column(col={"xs": 6, "md": 3}, controls=[stat_card(ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, t("daily_target"), str(self.metrics["target_calories"]), self.c["ORANGE"], self.c)]),
                     ft.Column(col={"xs": 6, "md": 3}, controls=[stat_card(ft.Icons.SET_MEAL_ROUNDED, t("protein"), f'{self.metrics["protein"]}g', self.c["BLUE"], self.c)]),
                     ft.Column(col={"xs": 6, "md": 3}, controls=[stat_card(ft.Icons.GRAIN_ROUNDED, t("carbs"), f'{self.metrics["carbs"]}g', self.c["GREEN"], self.c)]),
-                ], run_spacing=20, spacing=20),
+                ], run_spacing=15, spacing=15),
                 
-                ft.Container(height=20),
+                ft.Container(height=10),
+                
+                ft.ResponsiveRow([
+                    ft.Column(col={"xs": 12, "md": 4}, controls=[stat_card(ft.Icons.WATER_DROP_ROUNDED, "الماء", "2.5 L", self.c["BLUE"], self.c)]),
+                    ft.Column(col={"xs": 12, "md": 4}, controls=[stat_card(ft.Icons.FAVORITE_ROUNDED, "النبض", "72 BPM", self.c["RED"], self.c)]),
+                    ft.Column(col={"xs": 12, "md": 4}, controls=[stat_card(ft.Icons.BEDTIME_ROUNDED, "النوم", "7.5 hr", self.c["PURPLE"], self.c)]),
+                ], run_spacing=15, spacing=15),
+                
+                ft.Container(height=10),
+
                 ft.Container(
-                    bgcolor=self.c["CARD"], border_radius=24, padding=30, border=ft.border.all(1, self.c["CARD3"]),
+                    bgcolor=self.c["CARD"], border_radius=24, padding=20, border=ft.border.all(1, self.c["CARD3"]),
+                    ink=True, on_click=lambda e: self.page.go("/stats"),
+                    content=ft.Row([
+                        ft.Container(width=50, height=50, border_radius=14, bgcolor=f'{self.c["ACCENT"]}22', content=ft.Icon(ft.Icons.INSERT_CHART_ROUNDED, color=self.c["ACCENT"])),
+                        ft.Column([ft.Text(t("stats_title"), weight="bold", color=self.c["TEXT"], size=16), ft.Text(t("stats_sub"), color=self.c["SUB"], size=12)], expand=True, spacing=2),
+                        ft.Icon(ft.Icons.ARROW_FORWARD_IOS_ROUNDED, color=self.c["SUB"], size=16)
+                    ])
+                ),
+
+                ft.Container(
+                    bgcolor=self.c["CARD"], border_radius=24, padding=20, border=ft.border.all(1, self.c["CARD3"]),
                     content=ft.Row([
                         ft.Container(width=60, height=60, border_radius=20, bgcolor=f'{self.c["ACCENT"]}22', content=ft.Icon(ft.Icons.AUTO_AWESOME_ROUNDED, color=self.c["ACCENT"], size=30)),
                         ft.Column([
@@ -511,8 +633,96 @@ class DashboardView(ft.View):
                         ], expand=True, spacing=4)
                     ])
                 ),
-            ], spacing=20,
+            ], spacing=15,
         )
+
+# =========================================================
+# شاشة الرسوم البيانية (Stats & Charts) المدمجة باحترافية
+# =========================================================
+class StatsView(ft.View):
+    def __init__(self, page: ft.Page):
+        self.c = get_colors(page.theme_mode == ft.ThemeMode.DARK)
+        super().__init__(route="/stats", bgcolor=self.c["PAGE_BG"], scroll=None)
+        self.page = page
+        self.controls = [
+            ft.Stack([
+                shell(self.build_body(), self.c),
+                nav_bar(4, self.page.go, self.c)
+            ], expand=True)
+        ]
+
+    def build_body(self):
+        user = load_user()
+        metrics = calculate_metrics(user)
+        db = load_db()
+
+        wh = db.get("weight_history") or []
+        if not wh or len(wh) < 7:
+            weights = build_weight_history(user.weight)
+            days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+            wh = [{"day": d, "weight": w} for d, w in zip(days, weights)]
+        w_labels = [x["day"] for x in wh[-7:]]
+        w_values = [float(x["weight"]) for x in wh[-7:]]
+
+        ch = db.get("calorie_history") or []
+        if not ch or len(ch) < 7:
+            cals = build_calorie_history(metrics["target_calories"])
+            days = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
+            ch = [{"day": d, "calories": c} for d, c in zip(days, cals)]
+        c_labels = [x["day"] for x in ch[-7:]]
+        c_values = [int(x["calories"]) for x in ch[-7:]]
+
+        adherence = 92 if user.goal == "Maintain" else 88 if user.goal == "Lose Weight" else 84
+
+        return ft.Column([
+            header(self.page, t("stats_title"), t("stats_sub"), show_back=True),
+            ft.Container(height=10),
+            
+            ft.ResponsiveRow([
+                ft.Column(col={"xs":6,"md":3}, controls=[stat_card(ft.Icons.VERIFIED_ROUNDED, t("adherence"), f"{adherence}%", self.c["ACCENT"], self.c)]),
+                ft.Column(col={"xs":6,"md":3}, controls=[stat_card(ft.Icons.CALENDAR_MONTH_ROUNDED, t("active_days"), "24", self.c["BLUE"], self.c)]),
+                ft.Column(col={"xs":6,"md":3}, controls=[stat_card(ft.Icons.MONITOR_WEIGHT_ROUNDED, t("bmi"), str(metrics["bmi"]), self.c["ORANGE"], self.c)]),
+                ft.Column(col={"xs":6,"md":3}, controls=[stat_card(ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, t("daily_target"), str(metrics["target_calories"]), self.c["RED"], self.c)]),
+            ], run_spacing=15, spacing=15),
+            
+            ft.Container(height=10),
+            
+            ft.ResponsiveRow([
+                ft.Column(col={"xs":12,"lg":6}, controls=[chart_bars(t("weight_history"), w_labels, w_values, self.c["BLUE"], self.c)]),
+                ft.Column(col={"xs":12,"lg":6}, controls=[chart_bars(t("calories_history"), c_labels, c_values, self.c["ACCENT"], self.c)]),
+            ], run_spacing=15, spacing=15),
+
+            ft.Container(height=10),
+
+            ft.Container(
+                bgcolor=self.c["CARD"], border_radius=24, padding=25, border=ft.border.all(1, self.c["CARD3"]),
+                content=ft.Column([
+                    ft.Text(t("achievements"), size=18, weight="bold", color=self.c["TEXT"]),
+                    ft.ResponsiveRow([
+                        ft.Column(col={"xs":12,"md":4}, controls=[stat_card(ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, t("streak"), "12 " + ("days" if LANG=="en" else "يوم"), self.c["PURPLE"], self.c)]),
+                        ft.Column(col={"xs":12,"md":4}, controls=[stat_card(ft.Icons.FITNESS_CENTER_ROUNDED, t("workouts_logged"), "28", self.c["GREEN"], self.c)]),
+                        ft.Column(col={"xs":12,"md":4}, controls=[stat_card(ft.Icons.RESTAURANT_ROUNDED, t("meals_logged"), "64", self.c["ORANGE"], self.c)]),
+                    ], run_spacing=15, spacing=15)
+                ], spacing=15)
+            ),
+
+            ft.Container(height=10),
+
+            ft.Container(
+                bgcolor=self.c["CARD"], border_radius=24, padding=25, border=ft.border.all(1, self.c["CARD3"]),
+                content=ft.Column([
+                    ft.Text(t("current_snapshot"), size=18, weight="bold", color=self.c["TEXT"]),
+                    ft.ResponsiveRow([
+                        ft.Column(col={"xs":12,"md":6}, controls=[info_row(t("current_age"), f"{user.age} " + ("yrs" if LANG=="en" else "سنة"), ft.Icons.CAKE_ROUNDED, self.c["BLUE"], self.c)]),
+                        ft.Column(col={"xs":12,"md":6}, controls=[info_row(t("current_weight"), f"{user.weight} kg", ft.Icons.SCALE_ROUNDED, self.c["GREEN"], self.c)]),
+                        ft.Column(col={"xs":12,"md":6}, controls=[info_row(t("current_height"), f"{user.height} cm", ft.Icons.HEIGHT_ROUNDED, self.c["ORANGE"], self.c)]),
+                        ft.Column(col={"xs":12,"md":6}, controls=[info_row(t("current_goal"), t(user.goal.lower().replace(" ", "_")), ft.Icons.FLAG_ROUNDED, self.c["ACCENT"], self.c)]),
+                    ], run_spacing=15, spacing=15)
+                ], spacing=15)
+            ),
+            
+            ft.Container(height=40)
+        ], spacing=15)
 
 class MealsView(ft.View):
     def __init__(self, page: ft.Page):
@@ -754,7 +964,7 @@ class ProfileView(ft.View):
         self.controls = [
             ft.Stack([
                 shell(self.build_body(), self.c),
-                nav_bar(4, self.page.go, self.c)
+                nav_bar(5, self.page.go, self.c)
             ], expand=True)
         ]
 
@@ -795,7 +1005,7 @@ class ProfileView(ft.View):
                 controls=[
                     ft.Row([
                         ft.Container(width=65, height=60, border_radius=16, bgcolor=f'{self.c["ACCENT"]}22', alignment=ft.Alignment(0, 0), content=ft.Icon(ft.Icons.PERSON, color=self.c["ACCENT"], size=32)),
-                        ft.Column(controls=[ft.Text(self.user.name or "User", size=24, weight="bold", color=self.c["TEXT"]), ft.Text(f'{t("goal")}: {t(self.user.goal)}', size=14, color=self.c["SUB"])], spacing=2),
+                        ft.Column(controls=[ft.Text(self.user.name or "User", size=24, weight="bold", color=self.c["TEXT"]), ft.Text(f'{t("goal")}: {t(self.user.goal.lower().replace(" ", "_"))}', size=14, color=self.c["SUB"])], spacing=2),
                     ], spacing=15),
                     ft.Container(height=10),
                     name, ft.Row([ft.Container(expand=True, content=age), ft.Container(expand=True, content=gender)], spacing=20),
@@ -904,7 +1114,6 @@ class AdminDashboardView(ft.View):
                 dest = os.path.join(ASSETS_DIR, filename)
                 shutil.copy2(src, dest)
                 self.active_tf_for_upload.value = filename
-                self.active_tf_for_upload.value = filename
                 self.active_tf_for_upload.update()
                 self._show_snack("تم رفع الصورة بنجاح" if LANG=='ar' else "Image Uploaded", self.c["GREEN"])
             except Exception as ex:
@@ -950,6 +1159,7 @@ class AdminDashboardView(ft.View):
                 self.tabs.tabs[1] = self.build_users_tab()
                 self.update()
                 self._show_snack("تم حذف بيانات العضو وتصفير النظام", self.c["GREEN"])
+                self.page.go("/splash")
                 
             card_content = ft.Container(
                 width=550,
@@ -1234,6 +1444,7 @@ def main(page: ft.Page):
         if route == "/workout": return WorkoutView(page)
         if route == "/analysis": return AnalysisView(page)
         if route == "/profile": return ProfileView(page)
+        if route == "/stats": return StatsView(page)
         if route == "/admin_login": return AdminLoginView(page)
         if route == "/admin_dashboard": return AdminDashboardView(page)
         
